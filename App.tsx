@@ -7,10 +7,13 @@ import TaskList from './src/components/TaskList';
 import { addTask, deleteTask, getAllTasks, updateTask, TaskItem } from './src/utils/handle-api';
 import { globalStyles } from './src/styles/global';
 import AboutScreen from './src/components/AboutScreen';
+import { AuthProvider, useAuth } from './src/utils/AuthContext';
+import LoginScreen from './src/components/LoginScreen';
+import SignupScreen from './src/components/SignupScreen';
 
 // TODO (Zustand): Importe o seu useTaskStore aqui
 
-export default function App() {
+function TaskManager({ signOut }: { signOut: () => void }) {
   // TODO (Zustand): Remova este useState e utilize o seletor da sua store para pegar as tasks
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [text, setText] = useState("");
@@ -70,17 +73,22 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          {logoError ? (
-            <Text style={styles.header}>Gerenciador de Tarefas</Text>
-          ) : (
-            <Image 
-              source={require('./assets/task-app-banner.png')} 
-              style={styles.logo} 
-              onError={() => setLogoError(true)}
-            />
-          )}
-          {!logoError && <Text style={styles.header}>Tarefas</Text>}
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
+            {logoError ? (
+              <Text style={styles.header}>Gerenciador de Tarefas</Text>
+            ) : (
+              <Image 
+                source={require('./assets/task-app-banner.png')} 
+                style={styles.logo} 
+                onError={() => setLogoError(true)}
+              />
+            )}
+            {!logoError && <Text style={styles.header}>Tarefas</Text>}
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+            <Text style={styles.logoutText}>Sair</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.counterContainer}>
@@ -269,6 +277,36 @@ export default function App() {
   );
 }
 
+function AppContent() {
+  const { session, loading, signOut } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup'>('login');
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  if (!session) {
+    if (currentScreen === 'signup') {
+      return <SignupScreen onNavigateToLogin={() => setCurrentScreen('login')} />;
+    }
+    return <LoginScreen onNavigateToSignup={() => setCurrentScreen('signup')} />;
+  }
+
+  return <TaskManager signOut={signOut} />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -282,24 +320,50 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 16,
   },
-  headerContainer: {
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 16,
+    width: '100%',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   logo: {
-    width: 60,
-    height: 60,
-    marginBottom: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
   },
   header: {
-    textAlign: 'center',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
   },
-  counterContainer: {
-    marginTop: 8,
-    flexDirection: 'row',
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: '#000',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: 'transparent',
+  },
+  logoutText: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  counterContainer: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   counterText: {
